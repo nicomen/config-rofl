@@ -24,9 +24,6 @@ requires 'Moo';
 
 test_requires 'Test::Output';
 
-install_script glob('script/*');
-install_share 'share';
-
 auto_install;
 
 WriteAll;
