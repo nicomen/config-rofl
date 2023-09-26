@@ -38,6 +38,7 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: install deps and test
         run: |
+          eval "$(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)"
           cpanm --verbose -n --installdeps .
           prove -lvr t
           
