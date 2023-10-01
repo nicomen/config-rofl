@@ -177,46 +177,70 @@ sub _lookup_by_dist {
 
 =head1 NAME
 
-Config::ROFL - Yet another Yet Another Config Module
+Config::ROFL - Yet another config module
 
 =head1 SYNOPSIS
 
     use Config::ROFL;
     my $config = Config::ROFL->new()
     $config->get("frobs");
+    $config->get(qw/mail server host/);
 
     $config->share_file("system.yml");
-    $config->share_dir("assets");
 
 =head1 DESCRIPTION
+
+Subclassable and auto-magic config module utilizing M<Config::ZOMG>. It looks up which config path to use based on current mode, share dir and class name. Falls back to a relative share dir when run as part of tests.
 
 =head1 ATTRIBUTES
 
 =head2 config
 
+Returns a hashref representation of the config
+
 =head2 dist
 
-=head2 dist_dir
+The dist name used to find a share dir where the config file is located.
 
 =head2 global_path
 
+Global path overriding any lookup by dist, relative or by class of object.
+
 =head2 mode
+
+String used as part of name to lookup up config merged on top of general config.
+For instance if mode is set to "production", the config used will be: config.production.yml merged on top of config.yml
+Default is 'dev', except when HARNESS_ACTIVE env-var is set for instance when running tests, then mode is 'test'.
 
 =head2 name
 
+Name of config file, default is "config"
+
 =head2 config_path
+
+Path where to look for config files.
+
+=head2 lookup_order
+
+Order of config lookup. Default is ['by_dist', 'by_self', 'relative'], except when under tests when it is ['relative', 'by_dist', 'by_self']
 
 =head1 METHODS
 
-=head2 env_substitute
-
 =head2 get
+
+Gets a config value, supports an array of strings to traverse down to a certain child hash value.
 
 =head2 new
 
+Create a new config instance
+
+=head2 new
+
+Get an existing config instance if already created see M<MooX::Singleton>. Beware that altering env-vars between invocations will not affect the instance init args.
+
 =head2 share_file
 
-=head2 share_dir
+Gets the full path to a file residing in the share folder relative to the config.
 
 =head1 COPYRIGHT
 
