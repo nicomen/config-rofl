@@ -141,4 +141,9 @@ subtest 'Shared directories' => sub {
   chdir $old_dir;
 };
 
+subtest 'Using dist as parameter' => sub {
+  my $c = Config::ROFL->new( lookup_order => ['by_dist'], dist => 'File-Share' );
+  like $c->share_file, qr{auto/File/Share}, 'Correct share dir when setting dist to external module';
+};
+
 done_testing;
