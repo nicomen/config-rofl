@@ -129,14 +129,14 @@ sub _post_process_config {
   my ($hash) = @_;
 
   Data::Rmap::rmap_scalar {
-    defined $_ && (!readonly $_) && ($_ =~ s/__ENV\((\w+)\)__/env_substitute($1)/eg);
+    defined $_ && (!readonly $_) && ($_ =~ s/__ENV\((\w+)\)__/_env_substitute($1)/eg);
   }
   $hash;
 
   return;
 }
 
-sub env_substitute {
+sub _env_substitute {
   my ($prefix) = @_;
   return $ENV{$prefix} || '';
 }
