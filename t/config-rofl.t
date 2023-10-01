@@ -86,9 +86,9 @@ __CONFIG_END__
 
 subtest 'Test ENV replacement for Config::General' => sub {
   local $ENV{CONFIG_ROFL_CONFIG_PATH} = "$Bin/data/config";
-  local $ENV{LOL}            = 'LOL Was replaced';
+  local $ENV{LOL} = 'LOL Was replaced';
 
-  my $c = Config::ROFL->new(unique => 1);
+  my $c = Config::ROFL->new;
 
   is $c->get('App::DBI', 'database')->{value}, 'LOL Was replaced',
     'Correct __ENV(...)__ env-var replacement';
@@ -99,7 +99,7 @@ subtest 'Test ENV replacement for JSON' => sub {
   local $ENV{LOL}                 = 'LOL Was replaced';
   local $ENV{LOL_WITH_UNDERSCORE} = 'LOL_WITH_UNDERSCORE Was replaced';
 
-  my $c = Config::ROFL->new(unique => 1);
+  my $c = Config::ROFL->new;
 
   is $c->get('App::DBI', 'Database')->{value1}, 'LOL Was replaced',
     'Correct __ENV(...)__ env-var replacement';
@@ -108,37 +108,25 @@ subtest 'Test ENV replacement for JSON' => sub {
 };
 
 subtest 'Check that global_path override works' => sub {
-  my $c = Config::ROFL->new(unique => 1, dist_dir => "$Bin/data/config");
+  my $c = Config::ROFL->new( config_path => "$Bin/data/config/etc" );
   is $c->get("foo"), 'original', 'Got original config';
 
   my $c2 = Config::ROFL->new(
-    unique      => 1,
-    dist_dir    => "$Bin/data/config",
     global_path => "$Bin/data/config/overriden_config_path"
   );
   is $c2->get("foo"), 'overriden', 'Got overriden config';
 };
 
 subtest 'Check that YAML true values work' => sub {
-  my $c = Config::ROFL->new(unique => 1, config_path => "$Bin/data/config/yaml_true_value");
+  my $c = Config::ROFL->new( config_path => "$Bin/data/config/yaml_true_value" );
   lives_ok { $c->get('foo', 'bar'); } 'True value should not die';
 };
 
 subtest 'Shared directories' => sub {
-  my $c = Config::ROFL->new;
-  ok -d $c->share_dir, 'share_dir';
-  ok -d $c->share_dir('etc'), 'share_dir etc';
+  my $c = Config::ROFL->new( relative_dir => "$Bin/data/config/share" );
+  ok -d $c->share_file, 'share_file';
+  ok -d $c->share_file('etc'), 'share_file etc';
   ok -f $c->share_file(qw(etc config.yaml)), 'share_file etc/config.yaml';
-};
-
-subtest 'Shared directories' => sub {
-  my $old_dir = getcwd;
-  chdir "/tmp";
-  my $c = Config::ROFL->new( unique => 1 );
-  ok -d $c->share_dir, 'share_dir';
-  ok -d $c->share_dir('etc'), 'share_dir etc';
-  ok -f $c->share_file(qw(etc config.yaml)), 'share_file etc/config.yaml';
-  chdir $old_dir;
 };
 
 subtest 'Using dist as parameter' => sub {
