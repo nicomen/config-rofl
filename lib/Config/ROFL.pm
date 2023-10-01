@@ -17,31 +17,15 @@ use Types::Standard qw/Str HashRef/;
 use Moo;
 use namespace::clean;
 
-my $orig_cwd;
-BEGIN { $orig_cwd = Cwd::cwd; };
-
 has 'global_path'  => is => 'lazy', isa => Str, default => '/etc/';
 has 'config'       => is => 'rw',   lazy => 1,  builder => 1;
-has 'config_path'  => is => 'lazy', isa => Str, builder => 1;
-has 'default_dist' => is => 'lazy', default => '';
-has 'dist'         => is => 'lazy', isa => Str, default => sub { shift->default_dist };
-has 'dist_dir'     => is => 'lazy', coerce => sub { ref $_[0] eq 'Path::Tiny' ? $_[0] : path($_[0]); }, builder => 1;
+has 'config_path'  => is => 'lazy', coerce => sub { ref $_[0] eq 'Path::Tiny' ? $_[0] : path($_[0]); }, builder => 1;
+has 'dist'         => is => 'lazy', isa => Str, default => '';
 has 'relative_dir' => is => 'lazy', coerce => sub { ref $_[0] eq 'Path::Tiny' ? $_[0] : path($_[0]); }, builder => 1;
-
-sub _build_dist_dir {
-  my $self = shift;
-
-  my $path;
-  # if testing, first relative path to ourselves
-  if ($ENV{HARNESS_ACTIVE}) {
-    $path = $self->_lookup_relative // $self->_lookup_by_dist;
-  } else {
-    $path = $self->_lookup_by_dist // $self->_lookup_relative;
-  }
-
-  die 'Could not find relative path (' . $self->relative_dir . ') , nor dist path (' . $self->dist . ')' unless $path;
-
-  return path($path);
+has 'mode'         => is => 'lazy', isa => Str, default => sub { $ENV{CONFIG_ROFL_MODE} // ($ENV{HARNESS_ACTIVE} && 'test' || 'dev') };
+has 'name'         => is => 'lazy', isa => Str, default => sub { $ENV{CONFIG_ROFL_NAME} || 'config' };
+has 'lookup_order' => is => 'lazy', default => sub {
+  (shift->mode eq 'test') ? ['relative', 'by_dist', 'by_self'] : ['by_dist', 'by_self', 'relative']
 };
 
 sub _build_relative_dir {
@@ -50,32 +34,14 @@ sub _build_relative_dir {
   return $ENV{CONFIG_ROFL_RELATIVE_DIR} if $ENV{CONFIG_ROFL_RELATIVE_DIR};
 
   my $pm = _class_to_pm(ref $self);
-  if ($INC{$pm}) {
-    my $path = $INC{$pm};
-    $path =~ s{$pm}{};
-    $path = path($path)->parent->child('share');
-    return $path;
+  if (my $path = $INC{$pm}) {
+    return  path($path)->parent->parent->child('share');
   }
 }
 
-has 'mode' => (
-  is      => 'lazy',
-  isa     => Str,
-  default => sub { $ENV{CONFIG_ROFL_MODE} // ($ENV{HARNESS_ACTIVE} && 'test' || 'dev') },
-);
-has 'name' => (is => 'lazy', isa => Str, default => sub { $ENV{CONFIG_ROFL_NAME} || 'config' });
-has 'max_age' => (is => 'lazy', isa => Str, default => sub {0});
-
 with 'MooX::Singleton';
 
-sub BUILD {
-   my ($self, $args) = @_;
-
-   die "You need to either subclass " . __PACKAGE__ . " or pass in dist_dir, to use a custom dist"
-     if $args->{dist} && ref $self eq __PACKAGE__ && !$args->{dist_dir};
-}
-
-sub _build_config {    ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
+sub _build_config {
   my ($self) = @_;
 
   my $config = Config::ZOMG->new(
@@ -83,7 +49,6 @@ sub _build_config {    ## no critic(Subroutines::ProhibitUnusedPrivateSubroutine
     path         => $self->config_path,
     local_suffix => $self->mode,
     driver =>
-      # These options are only applicable when config ends up loaded by Config::General
       { General => {'-LowerCaseNames' => 1, '-InterPolateEnv' => 1, '-InterPolateVars' => 1,}, }
   );
 
@@ -116,12 +81,22 @@ around 'config' => sub {
 
 sub _build_config_path {
   my $self = shift;
-  return $ENV{CONFIG_ROFL_CONFIG_PATH} // (
-    (
-      List::Util::first {-e}
-      glob path($self->global_path, $self->name) . '.{conf,yml,yaml,json,ini}'
-    ) ? $self->global_path : $self->dist_dir . '/etc'
-  );
+  return $ENV{CONFIG_ROFL_CONFIG_PATH} if $ENV{CONFIG_ROFL_CONFIG_PATH};
+
+  if (List::Util::first {-e} glob path($self->global_path, $self->name) . '.{conf,yml,yaml,json,ini}') {
+    return $self->global_path
+  }
+
+  my $path;
+
+  for my $type (@{ $self->lookup_order }) {
+    my $method = "_lookup_$type";
+    $path //= $self->$method;
+  }
+
+  die 'Could not find relative path (' . $self->relative_dir . ') , nor dist path (' . $self->dist . ')' unless $path;
+
+  return path($path)->child('/etc');
 }
 
 
@@ -141,15 +116,6 @@ sub _env_substitute {
   return $ENV{$prefix} || '';
 }
 
-sub get {
-  my ($self, @keys) = @_;
-
-  return List::Util::reduce { $a->{$b} || $a->{lc $b} } $self->config, @keys;
-}
-
-sub share_dir  { shift->dist_dir->child(@_) }
-sub share_file { shift->dist_dir->child(@_) }
-
 sub _class_to_pm {
   my ($module) = @_;
   $module =~ s{(-|::)}{/}g;
@@ -166,10 +132,30 @@ sub _lookup_relative {
 sub _lookup_by_dist {
   my ($self) = @_;
 
-  return eval { File::Share::dist_dir($self->dist) } || eval { File::Share::dist_dir(ref $self) } || undef;
+  my $path;
+  return $path unless $self->dist;
+
+  eval { $path = File::Share::dist_dir($self->dist) } or warn $@;
+
+  return $path;
 }
 
+sub _lookup_by_self {
+  my ($self) = @_;
 
+  my $path;
+  eval { $path = File::Share::dist_dir(ref $self) }  or warn $@;
+
+  return $path;
+}
+
+sub get {
+  my ($self, @keys) = @_;
+
+  return List::Util::reduce { $a->{$b} || $a->{lc $b} } $self->config, @keys;
+}
+
+sub share_file { shift->config_path->parent->child(@_) }
 
 1;
 
