@@ -13,16 +13,15 @@ use Path::Tiny ();
 use Config::ROFL ();
 
 $ENV{CONFIG_ROFL_DEBUG} = 1;
-$ENV{CONFIG_ROFL_RELATIVE_DIR} = "$Bin/data/config/share";
 
 subtest 'Object interface' => sub {
-  my $c = Config::ROFL->new;
+  my $c = Config::ROFL->new( relative_dir => "$Bin/data/config/share" );
 
   my ($c1, $c2, $c3);
 
   {
     no warnings 'redefine';
-    local *Test::More::note = sub { warn @_; }; ## no critic (Policy::Variables::ProtectPrivateVars)
+    local *Test::More::note = sub { warn @_; };
     stderr_like { $c1 = $c->get('App::DBI') } qr/Loaded config/, 'Loaded config first time';
     stderr_unlike { $c2 = $c->get('App::DBI', 'serVER') } qr/Loaded config/,
       'Did not load config again';
@@ -32,10 +31,10 @@ subtest 'Object interface' => sub {
 
   {
     no warnings 'redefine';
-    local *Test::More::note = sub { warn @_; }; ## no critic (Policy::Variables::ProtectPrivateVars)
-    stderr_like { Config::ROFL->instance->get('App::dbi', 'serVER') }
+    local *Test::More::note = sub { warn @_; };
+    stderr_like { Config::ROFL->instance( relative_dir => "$Bin/data/config/share" )->get('App::dbi', 'serVER') }
       qr/Loaded config/, 'Did not load config again (default singleton) (instance method)';
-    stderr_unlike { Config::ROFL->instance->get('App::dbi', 'serVER') }
+    stderr_unlike { Config::ROFL->instance( relative_dir => "$Bin/data/config/share" )->get('App::dbi', 'serVER') }
       qr/Loaded config/, 'Did not load config again (default singleton) (instance method)';
   };
 
