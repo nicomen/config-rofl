@@ -168,7 +168,7 @@ Config::ROFL - Yet another config module
 =head1 SYNOPSIS
 
     use Config::ROFL;
-    my $config = Config::ROFL->new()
+    my $config = Config::ROFL->new;
     $config->get("frobs");
     $config->get(qw/mail server host/);
 
@@ -176,7 +176,7 @@ Config::ROFL - Yet another config module
 
 =head1 DESCRIPTION
 
-Subclassable and auto-magic config module utilizing M<Config::ZOMG>. It looks up which config path to use based on current mode, share dir and class name. Falls back to a relative share dir when run as part of tests.
+Subclassable and auto-magic config module utilizing L<Config::ZOMG>. It looks up which config path to use based on current mode, share dir and class name. Falls back to a relative share dir when run as part of tests.
 
 =head1 ATTRIBUTES
 
@@ -222,11 +222,21 @@ Create a new config instance
 
 =head2 new
 
-Get an existing config instance if already created see M<MooX::Singleton>. Beware that altering env-vars between invocations will not affect the instance init args.
+Get an existing config instance if already created see L<MooX::Singleton>. Beware that altering env-vars between invocations will not affect the instance init args.
 
 =head2 share_file
 
 Gets the full path to a file residing in the share folder relative to the config.
+
+=head1 SEE ALSO
+
+L<Config::Merge>
+
+L<Config::General>
+
+L<Config::JFDI>
+
+L<Config::ZOMG>
 
 =head1 COPYRIGHT
 
