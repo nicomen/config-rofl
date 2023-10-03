@@ -22,6 +22,7 @@ requires 'File::Spec';
 requires 'List::Util' => '1.33';    # 1.33 needed for 'any'
 requires 'Moo';
 requires 'MooX::Singleton';
+requires 'Types::Standard';
 requires 'YAML::XS';
 test_requires 'Test::Output';
 
