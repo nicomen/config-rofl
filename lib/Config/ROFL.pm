@@ -13,11 +13,12 @@ use Path::Tiny qw( cwd path );
 use List::Util ();
 use Scalar::Util qw( readonly );
 use Types::Standard qw/Str HashRef/;
+use FindBin qw/$Bin/;
 
 use Moo;
 use namespace::clean;
 
-has 'global_path'  => is => 'lazy', isa => Str, default => '/etc/';
+has 'global_path'  => is => 'lazy', isa => Str, default => sub { $ENV{CONFIG_ROFL_GLOBAL_PATH} // '/etc' };
 has 'config'       => is => 'rw',   lazy => 1,  builder => 1;
 has 'config_path'  => is => 'lazy', coerce => sub { ref $_[0] eq 'Path::Tiny' ? $_[0] : path($_[0]); }, builder => 1;
 has 'dist'         => is => 'lazy', isa => Str, default => '';
@@ -25,7 +26,7 @@ has 'relative_dir' => is => 'lazy', coerce => sub { ref $_[0] eq 'Path::Tiny' ? 
 has 'mode'         => is => 'lazy', isa => Str, default => sub { $ENV{CONFIG_ROFL_MODE} // ($ENV{HARNESS_ACTIVE} && 'test' || 'dev') };
 has 'name'         => is => 'lazy', isa => Str, default => sub { $ENV{CONFIG_ROFL_NAME} || 'config' };
 has 'lookup_order' => is => 'lazy', default => sub {
-  (shift->mode eq 'test') ? ['relative', 'by_dist', 'by_self'] : ['by_dist', 'by_self', 'relative']
+  [ 'global_path', (shift->mode eq 'test') ? ('relative', 'by_dist', 'by_self') : ('by_dist', 'by_self', 'relative') ]
 };
 
 sub _build_relative_dir {
@@ -33,9 +34,14 @@ sub _build_relative_dir {
 
   return $ENV{CONFIG_ROFL_RELATIVE_DIR} if $ENV{CONFIG_ROFL_RELATIVE_DIR};
 
-  my $pm = _class_to_pm(ref $self);
-  if (my $path = $INC{$pm}) {
-    return  path($path)->parent->parent->child('share');
+  if (ref $self eq __PACKAGE__) {
+    my $root = $Bin =~ m{/(?:bin|script|lib|t)\z}gmx ? Path::Tiny->new($Bin)->parent: $Bin;
+    return $root->child('share');
+  } else {
+    my $pm = _class_to_pm(ref $self);
+    if (my $path = $INC{$pm}) {
+      return  path($path)->parent->parent->child('share');
+    }
   }
 }
 
@@ -81,22 +87,19 @@ around 'config' => sub {
 
 sub _build_config_path {
   my $self = shift;
-  return $ENV{CONFIG_ROFL_CONFIG_PATH} if $ENV{CONFIG_ROFL_CONFIG_PATH};
-
-  if (List::Util::first {-e} glob path($self->global_path, $self->name) . '.{conf,yml,yaml,json,ini}') {
-    return $self->global_path
-  }
 
   my $path;
 
   for my $type (@{ $self->lookup_order }) {
     my $method = "_lookup_$type";
-    $path //= $self->$method;
+    if ($path = $self->$method) {
+      warn "Found config via '$method'";
+      return $method eq '_lookup_global_path' ? path($path) : path($path)->child('/etc');
+    }
   }
 
   die 'Could not find relative path (' . $self->relative_dir . ') , nor dist path (' . $self->dist . ')' unless $path;
 
-  return path($path)->child('/etc');
 }
 
 
@@ -147,6 +150,16 @@ sub _lookup_by_self {
   eval { $path = File::Share::dist_dir(ref $self) }  or warn $@;
 
   return $path;
+}
+
+sub _lookup_global_path {
+  my ($self) = @_;
+
+  return $ENV{CONFIG_ROFL_CONFIG_PATH} if $ENV{CONFIG_ROFL_CONFIG_PATH};
+
+  if (List::Util::first {-e} glob path($self->global_path, $self->name) . '.{conf,yml,yaml,json,ini}') {
+    return $self->global_path;
+  }
 }
 
 sub get {

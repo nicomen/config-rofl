@@ -133,4 +133,11 @@ subtest 'Using dist as parameter' => sub {
   like $c->share_file, qr{auto/File/Share}, 'Correct share dir when setting dist to external module';
 };
 
+subtest 'sub-class' => sub {
+  require "$Bin/test-subclass/lib/Foo/Config.pm";
+  my $c = Foo::Config->new();
+  diag explain $c->config;
+  is $c->get('foo'), 'bar', 'Correct value';
+};
+
 done_testing;
