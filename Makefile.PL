@@ -5,7 +5,7 @@ use warnings;
 name 'Config-ROFL';
 author q{Nicolas Mendoza <mendoza@pvv.ntnu.no>};
 license 'perl';
-version '1.04';
+version '1.05';
 
 configure_requires 'Module::Install';
 
