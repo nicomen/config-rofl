@@ -26,6 +26,9 @@ requires 'namespace::clean';
 requires 'Path::Tiny';
 requires 'Types::Standard';
 requires 'YAML::XS';
+
+test_requires 'File::Share';
+test_requires 'Test::More';
 test_requires 'Test::Output';
 
 auto_install;
