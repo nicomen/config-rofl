@@ -16,6 +16,7 @@ requires 'Carp';
 requires 'Config::General';
 requires 'Cpanel::JSON::XS' => '4.04';
 requires 'Config::ZOMG';
+requires 'Config::Any' => 0.33;
 requires 'Data::Rmap';
 requires 'File::Share';
 requires 'File::Spec';
