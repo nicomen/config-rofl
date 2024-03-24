@@ -1,4 +1,5 @@
 package Config::ROFL;
+our $VERSION = '1.09';
 
 use strict;
 use warnings;
