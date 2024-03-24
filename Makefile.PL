@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 name 'Config-ROFL';
+abstract 'Yet another config module';
 author q{Nicolas Mendoza <mendoza@pvv.ntnu.no>};
 license 'perl';
 version '1.09';
