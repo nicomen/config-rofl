@@ -14,6 +14,11 @@ use Config::ROFL ();
 
 $ENV{CONFIG_ROFL_DEBUG} = 1;
 
+subtest 'Does not crash (libyaml.so)' => sub {
+  my $c = Config::ROFL->new( relative_dir => "$Bin/data/config/share" );
+  lives_ok { $c->get('test'); } 'Does not crash: "LibYAML.c: loadable library and perl binaries are mismatched (got first handshake key 0xeb80080, needed 0xf380080)"';
+};
+
 subtest 'Object interface' => sub {
   my $c = Config::ROFL->new( relative_dir => "$Bin/data/config/share" );
 
