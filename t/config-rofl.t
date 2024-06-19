@@ -145,4 +145,15 @@ subtest 'sub-class' => sub {
   is $c->get('foo'), 'bar', 'Correct value';
 };
 
+subtest 'Test prefix ENV config values' => sub {
+  local $ENV{CONFIG_ROFL_CONFIG_PATH} = "$Bin/data/config/json";
+  local $ENV{MYPREFIX_KEY}            = 'Some value';
+
+  my $c = Config::ROFL->new( envvar_prefix => 'MYPREFIX' );
+
+  diag explain $c->config;
+
+  is $c->get('key'), 'Some value', 'Got value from environment'
+};
+
 done_testing;
